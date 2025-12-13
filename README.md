@@ -76,3 +76,35 @@ terraform destroy
 ```
 
 Type `yes` to confirm.
+
+
+
+
+
+## 🧩 Resource Details
+
+### 1. Compute Layer (`aws_instance`)
+The application runs on a single EC2 instance defined as `aws_instance.app_server`.
+
+* **`ami` (Amazon Machine Image):**
+    * **Strategy:** Dynamic Lookup.
+    * **Description:** Instead of hardcoding an AMI ID (which varies by region and becomes obsolete), we use a **Data Source** (`data.aws_ami.ubuntu`) to fetch the latest **Ubuntu 22.04 LTS** image from Canonical at runtime. This ensures the server always launches with the latest security patches.
+
+* **`instance_type`:**
+    * **Value:** `t3.micro`
+    * **Reasoning:** Chosen for cost-efficiency in the `eu-north-1` (Stockholm) region. It provides sufficient CPU burst capability for a development/staging web server.
+
+* **`vpc_security_group_ids`:**
+    * **Description:** Attaches the `fintech-app-sg` firewall.
+    * **Rules:**
+        * **Ingress 22 (SSH):** For administrative access.
+        * **Ingress 80 (HTTP):** For public web traffic.
+        * **Egress All:** Allows the server to download updates and packages.
+
+* **`tags`:**
+    * **Description:** Metadata (`Name`, `Project`, `Environment`) used for cost allocation and resource organization in the AWS Console.
+
+### 2. Storage Layer (`aws_s3_bucket`)
+* **Bucket Name:** `voncleph-ecommerce-product-images`
+* **Purpose:** persistent object storage for application assets.
+* **Configuration:** `force_destroy = true` is enabled to allow automated teardowns during the development phase.

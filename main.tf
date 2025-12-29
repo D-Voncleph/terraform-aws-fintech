@@ -1,67 +1,53 @@
-# ---------------------------------------------------------
 # 1. PROVIDER
-# ---------------------------------------------------------
 provider "aws" {
-  region = "eu-north-1" # Stockholm
+  region = var.aws_region  # <--- CHANGED
 }
 
-# ---------------------------------------------------------
-# 2. STORAGE (S3 Bucket - From last week)
-# ---------------------------------------------------------
+# 2. STORAGE
 resource "aws_s3_bucket" "product_images" {
   bucket        = "voncleph-ecommerce-product-images"
   force_destroy = true
 
   tags = {
-    Name        = "FinTech Product Images"
+    Name    = "FinTech Product Images"
     Environment = "Dev"
-    Project     = "FinTech-IaC"
+    Project = var.project_name # <--- CHANGED
   }
 }
 
-# ---------------------------------------------------------
-# 3. DATA SOURCES (Dynamic Lookups)
-# ---------------------------------------------------------
-# Fetch the latest Ubuntu 22.04 AMI
+# 3. DATA SOURCE (Keep this dynamic!)
 data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["099720109477"] # Canonical
+  owners      = ["099720109477"]
 
   filter {
     name   = "name"
     values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
   }
-
   filter {
     name   = "virtualization-type"
     values = ["hvm"]
   }
 }
 
-# ---------------------------------------------------------
-# 4. NETWORK SECURITY (Firewall)
-# ---------------------------------------------------------
+# 4. SECURITY GROUP
 resource "aws_security_group" "app_sg" {
   name        = "fintech-app-sg"
-  description = "Allow HTTP and SSH traffic"
+  description = "Allow HTTP and SSH"
+  vpc_id      = aws_vpc.fintech_vpc.id  # <--- NEW LINE: Link to custom VPC
 
-  # Allow SSH (for management)
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  # Allow HTTP (for the Frontend)
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  # Allow all outbound traffic
   egress {
     from_port   = 0
     to_port     = 0
@@ -70,21 +56,15 @@ resource "aws_security_group" "app_sg" {
   }
 }
 
-# ---------------------------------------------------------
-# 5. COMPUTE (EC2 Instance)
-# ---------------------------------------------------------
+# 5. COMPUTE
 resource "aws_instance" "app_server" {
-  # Reference the Data Source
   ami           = data.aws_ami.ubuntu.id
-  
-  # Use t3.micro for eu-north-1 (Stockholm)
-  instance_type = "t3.micro"
-
-  # Reference the Security Group
+  instance_type = var.instance_type      # <--- CHANGED
+  subnet_id = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.app_sg.id]
 
   tags = {
     Name    = "FinTech-App-Server"
-    Project = "FinTech-IaC"
+    Project = var.project_name           # <--- CHANGED
   }
 }

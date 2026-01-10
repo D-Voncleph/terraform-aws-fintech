@@ -116,3 +116,28 @@ After deployment, Terraform will output the following connection details:
 
 * `server_public_ip`: The public IP address of the EC2 instance.
 * `s3_bucket_name`: The unique name of the created S3 bucket.
+
+
+---
+
+## 🔐 State Management (Remote Backend)
+
+This infrastructure uses a **Remote Backend** to store the Terraform state file, replacing the default local file. This ensures:
+1.  **Collaboration:** All team members read/write to the same "Single Source of Truth."
+2.  **Safety:** State Locking prevents two developers from overwriting each other's work simultaneously.
+
+### Architecture
+* **Storage (S3):** The `terraform.tfstate` file is stored in an encrypted S3 bucket.
+* **Locking (DynamoDB):** A DynamoDB table tracks active sessions. If `terraform apply` is running, the table "locks" the state until the process finishes.
+
+### ⚠️ Bootstrapping (Prerequisites)
+The backend resources are **not** managed by Terraform itself (to avoid the "Chicken and Egg" problem). They must be provisioned manually before initializing the project.
+
+**Required Resources:**
+1.  **S3 Bucket:** `fintech-terraform-state-voncleph` (Must have Versioning enabled)
+2.  **DynamoDB Table:** `fintech-terraform-locks` (Partition Key: `LockID`)
+
+### Initialization
+To configure the backend connection:
+```bash
+terraform init

@@ -1,70 +1,44 @@
-# 1. PROVIDER
 provider "aws" {
-  region = var.aws_region  # <--- CHANGED
+  region = var.aws_region
 }
 
-# 2. STORAGE
+# ---------------------------------------------------------
+# 1. NETWORK MODULE
+# ---------------------------------------------------------
+module "vpc" {
+  source = "./modules/vpc"
+
+  vpc_cidr            = "10.0.0.0/16"
+  public_subnet_cidr  = "10.0.1.0/24"
+  private_subnet_cidr = "10.0.2.0/24"
+  availability_zone   = "${var.aws_region}a"
+  project_name        = var.project_name
+}
+
+# ---------------------------------------------------------
+# 2. COMPUTE MODULE
+# ---------------------------------------------------------
+module "server" {
+  source = "./modules/ec2"
+
+  # We pass data FROM the VPC module INTO the EC2 module
+  vpc_id    = module.vpc.vpc_id
+  subnet_id = module.vpc.public_subnet_id
+
+  instance_type = var.instance_type
+  project_name  = var.project_name
+}
+
+# ---------------------------------------------------------
+# 3. STORAGE (Keeping S3 separate for now)
+# ---------------------------------------------------------
 resource "aws_s3_bucket" "product_images" {
   bucket        = "voncleph-ecommerce-product-images"
   force_destroy = true
 
   tags = {
     Name    = "FinTech Product Images"
-    Environment = "Dev"
-    Project = var.project_name # <--- CHANGED
+    Project = var.project_name
   }
 }
 
-# 3. DATA SOURCE (Keep this dynamic!)
-data "aws_ami" "ubuntu" {
-  most_recent = true
-  owners      = ["099720109477"]
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
-  }
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
-
-# 4. SECURITY GROUP
-resource "aws_security_group" "app_sg" {
-  name        = "fintech-app-sg"
-  description = "Allow HTTP and SSH"
-  vpc_id      = aws_vpc.fintech_vpc.id  # <--- NEW LINE: Link to custom VPC
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# 5. COMPUTE
-resource "aws_instance" "app_server" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = var.instance_type      # <--- CHANGED
-  subnet_id = aws_subnet.public.id
-  vpc_security_group_ids = [aws_security_group.app_sg.id]
-
-  tags = {
-    Name    = "FinTech-App-Server"
-    Project = var.project_name           # <--- CHANGED
-  }
-}

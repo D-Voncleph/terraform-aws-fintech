@@ -1,6 +1,6 @@
 # 1. VPC
 resource "aws_vpc" "this" {
-  cidr_block           = var.vpc_cidr
+  cidr_block = var.vpc_cidr
 
   # Required for EFS and some internal AWS DNS resolution features
   enable_dns_support   = true

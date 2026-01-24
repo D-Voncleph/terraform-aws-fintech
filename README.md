@@ -78,3 +78,26 @@ After deployment, Terraform will output:
 
 * `server_public_ip`: The IP address of the application server.
 * `s3_bucket_name`: The ID of the application data bucket.
+
+
+---
+
+## 🏆 Best Practices Implemented
+This project adheres to strict DevOps standards:
+
+1.  **Remote State Management:**
+    * State is stored in **S3** (not local disk) to enable team collaboration.
+    * **DynamoDB Locking** is enabled to prevent race conditions during concurrent deployments.
+    * **Versioning** is active on the S3 bucket to allow state recovery in case of corruption.
+
+2.  **Modular Architecture:**
+    * Resources are grouped into reusable modules (`modules/vpc`, `modules/ec2`) to adhere to the **DRY (Don't Repeat Yourself)** principle.
+    * The root module acts strictly as an orchestrator, passing variables down to child modules.
+
+3.  **Security & Safety:**
+    * **No Hardcoded Secrets:** All sensitive values are passed via variables or environment variables.
+    * **Least Privilege:** Security Groups are scoped to specific ports (80/22) rather than opening all traffic.
+
+4.  **Code Quality:**
+    * All code is formatted using `terraform fmt -recursive` for consistent style.
+    * Inputs are strictly typed (`type = string`) with descriptive comments to ensure maintainability.

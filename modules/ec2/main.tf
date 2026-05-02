@@ -30,6 +30,14 @@ resource "aws_security_group" "this" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Jenkins UI Access
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # In production, restrict this to your IP!
+  }
+
   ingress {
     from_port   = 80
     to_port     = 80
@@ -54,6 +62,8 @@ resource "aws_security_group" "this" {
 resource "aws_instance" "this" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
+
+  key_name = "fintech-key-2026"
 
   subnet_id              = var.subnet_id # Passed in from the root
   vpc_security_group_ids = [aws_security_group.this.id]
